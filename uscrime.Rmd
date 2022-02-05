@@ -1,0 +1,107 @@
+---
+title: "PCA Analysis of US Crime"
+---
+```{r}
+# Clear environment & set random number generator for reproducible results
+rm(list = ls())
+
+set.seed(1)
+```
+
+```{r}
+# Data Input
+
+crimedata <- read.table("uscrime.txt", stringsAsFactors = FALSE, header = TRUE)
+
+#
+# optional check to make sure the data is read correctly
+#
+
+head(crimedata)
+```
+
+```{r}
+
+# We perform a PCA on the matrix of scaled predictors
+
+pca_crime <- prcomp(crimedata[,1:15], scale. = TRUE)
+summary(pca_crime)
+
+# We can now visualize the first four principal components
+
+screeplot(pca_crime, type="lines",col="red")
+
+```
+
+
+
+```{r}
+
+# We can now obtain the first 4 principal components 
+
+PC_4comp <- pca_crime$x[,1:4]
+attributes(pca_crime$x)
+pca_crime$x
+PC_4comp
+
+```
+
+```{r}
+
+# We can build a linear regression model with the first 4 PCs with first 4 PCs as predictors and the Crime Rate as response
+PC4_crime <- cbind(PC_4comp, crimedata[,16])
+
+# The Regression Model
+
+PC4_model <- lm(V5~., data = as.data.frame(PC4_crime))
+
+summary(PC4_model)
+
+# Parameters for the linear regression model for PC predictors
+
+Intercept0 <- PC4_model$coefficients[1]
+Coeffs <- PC4_model$coefficients[2:5]
+Intercept0
+
+Coeffs
+
+```
+
+```{r}
+# Determine the coefficients for the Scaled original variable from these PC coefficients
+
+pca_crime$rotation[,1:4]
+Orig_Coeffs <- pca_crime$rotation[,1:4] %*% Coeffs
+t(Orig_Coeffs)
+
+Orig_unscaled_Coeffs <- Orig_Coeffs/sapply(crimedata[,1:15],sd)
+Orig_unscaled_Intercept0 <- Intercept0 - sum(Orig_Coeffs*sapply(crimedata[,1:15],mean)/sapply(crimedata[,1:15],sd))
+
+# The coefficients for unscaled data:
+
+t(Orig_unscaled_Coeffs)
+
+Orig_unscaled_Intercept0
+
+
+# The predicted values from the 4 PC Model
+
+Prediction_4PC <- as.matrix(crimedata[,1:15]) %*% Orig_unscaled_Coeffs + Orig_unscaled_Intercept0
+Prediction_4PC
+
+
+```
+
+```{r}
+# We can calculate the R^2 and R^2_adj for comparison with the standard regression model
+
+SSE = sum((Prediction_4PC - crimedata[,16])^2)
+SStot = sum((crimedata[,16] - mean(crimedata[,16]))^2)
+1 - SSE/SStot
+
+
+R2 <- 1 - SSE/SStot
+R2 - (1 - R2)*4/(nrow(crimedata)-4-1)
+
+```
+
