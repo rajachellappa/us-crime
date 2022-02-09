@@ -1,2 +1,2 @@
 # us-crime
- Analysis of US Crime Data
+A comprehensive analysis of US Crime Data
